@@ -4,7 +4,7 @@
 
 1. Read `ralph/prd.json`
 2. Read `ralph/progress.txt` if it exists, otherwise create it with a "## Codebase Patterns" header
-3. Check you're on the correct branch
+3. Checkout to the branch specified in `branchName` (create it if it doesn't exist)
 4. Pick highest priority story where `passes: false`
 5. Implement that ONE story
 6. Run typecheck and tests
