@@ -1,6 +1,6 @@
-# PRD Generation Skill
+# PRD Builder for Ralph
 
-You are generating a Product Requirements Document (PRD) for the Ralph Loop system.
+You are helping the user build a Product Requirements Document (PRD) for the Ralph autonomous agent to work on.
 
 ## Input Handling
 
@@ -8,164 +8,262 @@ The user will provide either:
 1. A Linear ticket ID (e.g., "LIN-123" or just "123")
 2. A direct description as a string
 
-## Steps
+## Process
 
-### 1. Determine Input Type
+### Phase 1: Clean Up Existing Files
+
+Before generating a new PRD, check for existing files:
+
+1. Check if `ralph/prd.json` exists
+2. Check if `ralph/progress.json` exists
+
+If either file exists:
+- Delete both files (they are a pair and should be regenerated together)
+- Inform the user that existing PRD/progress files were removed
+- Proceed with fresh generation
+
+### Phase 2: Determine Input Type
 
 Check if the input looks like a Linear ticket ID:
 - Matches pattern: `LIN-\d+` or `[A-Z]+-\d+` or just `\d+`
-- If yes, it's a Linear ticket
-- If no, treat it as a direct description
+- If yes, fetch the Linear ticket using `mcp__plugin_linear_linear__get_issue`
+- Extract: Title, Description, Acceptance criteria, Labels, Project, **Git branch name**
+- Use the Linear-provided git branch name as the `branchName` in the PRD
+- If no, treat it as a direct description and generate a branch name like `ralph/[feature-name]`
 
-### 2. Fetch Linear Ticket (if applicable)
+### Phase 3: Discovery
 
-If it's a Linear ticket ID:
-- Use `mcp__plugin_linear_linear__get_issue` to fetch the ticket
-- Extract the following:
-  - Title
-  - Description
-  - Acceptance criteria (if present in description)
-  - Labels (for context)
-  - Project (if assigned)
+1. **Understand the request** - What feature/fix is being requested?
+2. **Explore the codebase** - Find relevant files, patterns, and existing implementations
+3. **Ask clarifying questions** - Use AskUserQuestion to clarify:
+   - Scope boundaries (what's in/out)
+   - Expected behavior
+   - Edge cases
+   - Dependencies on other features
 
-### 3. Parse Requirements
+### Phase 4: Architecture
 
-From the description (Linear or direct), identify:
-- Overall feature/goal
-- Individual user stories (break down large features)
-- Acceptance criteria for each story
-- Priority based on dependencies
+1. **Identify affected areas**:
+   - Database schemas (`packages/core/src/{domain}/{domain}.sql.ts`)
+   - Domain logic (`packages/core/src/{domain}/index.ts`)
+   - API handlers (`packages/functions/src/{domain}/`)
+   - Dashboard routes (`packages/dashboard/app/routes/`)
+   - Dashboard components (`packages/dashboard/app/components/{feature}/`)
+   - Flow nodes (`packages/core/src/{domain}/nodes/`)
+   - Queue handlers (`packages/queue/src/`)
 
-### 4. Break Down into Small Stories
+2. **Map dependencies** - What needs to be built first?
 
-CRITICAL: Each user story MUST:
-- Fit in one context window (small scope)
-- Have explicit, testable acceptance criteria
-- Include "typecheck passes" in criteria
-- Include "tests pass" if applicable
-- Be independent or have clear dependencies
+### Phase 5: Story Breakdown
 
-**Examples:**
+**CRITICAL: Stories must be ATOMIC**
 
-❌ Too large: "Build authentication system"
-✅ Right size:
-- "Create login form component"
-- "Add email validation to login form"
-- "Create login server action"
-- "Connect login form to server action"
+Each story should be:
 
-### 5. Generate PRD JSON
+- **Single responsibility** - One thing only
+- **Independently verifiable** - Can run typecheck after completion
+- **Small** - Should take 1-3 files to change
+- **Clear acceptance criteria** - Specific, testable conditions
 
-If `ralph/prd.json` exists, read it to:
-- Preserve existing branchName if present
-- Get the next available story ID
-- Preserve any existing stories that haven't passed
+**Story Granularity Examples:**
 
-If it doesn't exist, create it fresh.
-
-Generate user stories in this format:
+BAD (too big):
 
 ```json
 {
-  "branchName": "ralph/feature-name",
+  "title": "Implement calendar syncing feature",
+  "acceptanceCriteria": ["Calendar syncs work"]
+}
+```
+
+GOOD (atomic):
+
+```json
+{
+  "title": "Add calendarEvents table schema",
+  "acceptanceCriteria": [
+    "Create `packages/core/src/calendar/calendar.sql.ts`",
+    "Define pgTable with: id (uuid), organizationId, teamId, title, startTime, endTime, externalId",
+    "Use timestampColumns helper for audit fields",
+    "Export Zod schema using drizzle-zod",
+    "Typecheck passes (`npm run typecheck:core`)"
+  ]
+}
+```
+
+### Phase 6: Generate PRD
+
+Create the PRD with this structure:
+
+```json
+{
+  "branchName": "[Linear git branch name OR ralph/feature-name]",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Short descriptive title",
+      "title": "[Concise action: verb + noun]",
       "acceptanceCriteria": [
-        "Specific criterion 1",
-        "Specific criterion 2",
-        "typecheck passes"
+        "Specific file to create/modify",
+        "Specific fields/functions to add",
+        "Specific behavior to implement",
+        "Typecheck passes"
       ],
       "priority": 1,
       "passes": false,
-      "notes": "Optional context or hints"
+      "notes": "Optional context for Ralph"
     }
   ]
 }
 ```
 
-### 6. Write PRD File
+Write the PRD to `ralph/prd.json`.
 
-- Create or update `ralph/prd.json`
-- Assign sequential IDs (US-001, US-002, etc.)
-- Set priorities based on logical implementation order
-- Write to `ralph/prd.json`
+### Phase 7: Summary
 
-### 7. Summary
+Provide a summary explaining:
+1. The overall approach
+2. Why stories are ordered this way
+3. Any assumptions made
+4. Number of stories created with IDs and titles
+5. Suggested first story to start with
+6. Next steps (run `./ralph/ralph.sh 25`)
 
-Provide a summary showing:
-- Number of stories created
-- Story IDs and titles
-- Suggested branch name
-- Next steps (run `./ralph/ralph.sh 25`)
+## Story Templates
 
-## Quality Guidelines
+### Database Schema Story
 
-### Story Size
-Each story should take roughly 5-15 minutes for an AI agent to implement. If a story seems larger:
-- Break it into smaller pieces
-- Create dependencies via priority ordering
-
-### Acceptance Criteria
-Make criteria explicit and testable:
-
-❌ Vague: "Form works correctly"
-✅ Explicit:
-- "Form has email and password fields"
-- "Email field validates format"
-- "Submit button is disabled when invalid"
-- "Shows error message on validation failure"
-
-### Priority Assignment
-1. Start with priority 1 for the first story
-2. Increment for each subsequent story
-3. If stories are independent, they can share priority
-4. Lower number = higher priority (done first)
-
-### Notes Field
-Use the notes field for:
-- Implementation hints ("Use existing form components")
-- File locations ("Add to /app/auth/login")
-- Dependencies ("Requires US-003 to be complete")
-- Linear context ("From Linear ticket LIN-123")
-
-## Example Output
-
-After running `/prd "Add user authentication"`, you should:
-
-1. Parse the request
-2. Break it into small stories like:
-   - US-001: Create login form component
-   - US-002: Add form validation
-   - US-003: Create login server action
-   - US-004: Add session management
-   - US-005: Create logout functionality
-
-3. Update `ralph/prd.json`
-
-4. Show summary:
+```json
+{
+  "title": "Add [entity] table schema",
+  "acceptanceCriteria": [
+    "Create `packages/core/src/[domain]/[domain].sql.ts`",
+    "Define pgTable with fields: id (uuid primary key), organizationId, teamId, [domain fields]",
+    "Use timestampColumns helper for createdAt, updatedAt, deletedAt",
+    "Add appropriate indexes and foreign key constraints",
+    "Export Zod schemas using createInsertSchema/createSelectSchema from drizzle-zod",
+    "Typecheck passes (`npm run typecheck:core`)"
+  ]
+}
 ```
-✅ Created 5 user stories for "Add user authentication"
 
-Stories:
-- US-001: Create login form component (priority 1)
-- US-002: Add form validation (priority 2)
-- US-003: Create login server action (priority 3)
-- US-004: Add session management (priority 4)
-- US-005: Create logout functionality (priority 5)
+### Domain Model Story
 
-Branch: ralph/user-auth
-
-Next steps:
-./ralph/ralph.sh 25
+```json
+{
+  "title": "Create [entity] domain model",
+  "acceptanceCriteria": [
+    "Create `packages/core/src/[domain]/index.ts`",
+    "Implement core business logic functions",
+    "Use Drizzle ORM for database queries",
+    "Export public API from index.ts",
+    "Typecheck passes (`npm run typecheck:core`)"
+  ]
+}
 ```
+
+### Hono API Handler Story
+
+```json
+{
+  "title": "Create [entity].[action] API endpoint",
+  "acceptanceCriteria": [
+    "Add route handler in `packages/functions/src/[domain]/`",
+    "Define OpenAPI spec with Zod schemas",
+    "Implement endpoint logic using domain model from @safetyradar/core",
+    "Return typed JSON response",
+    "Typecheck passes (`npm run typecheck:functions`)"
+  ]
+}
+```
+
+### Dashboard Route Story
+
+```json
+{
+  "title": "Create [feature] dashboard route",
+  "acceptanceCriteria": [
+    "Create route file in `packages/dashboard/app/routes/`",
+    "Use flat-routes naming convention",
+    "Implement loader/action as needed",
+    "Wire up TanStack Query for data fetching",
+    "Typecheck passes (`npm run typecheck:dashboard`)"
+  ]
+}
+```
+
+### Dashboard Component Story
+
+```json
+{
+  "title": "Create [component] UI component",
+  "acceptanceCriteria": [
+    "Create component in `packages/dashboard/app/components/[feature]/`",
+    "Use TailwindCSS for styling",
+    "Integrate with Jotai atoms if state management needed",
+    "Handle loading/error states",
+    "Typecheck passes (`npm run typecheck:dashboard`)"
+  ]
+}
+```
+
+### Flow Node Story
+
+```json
+{
+  "title": "Create [nodeType] flow node",
+  "acceptanceCriteria": [
+    "Create node definition in `packages/core/src/[domain]/nodes/`",
+    "Define configSchema and outputSchema using Zod",
+    "Implement run() method with lifecycle hooks",
+    "Register node in domain registry",
+    "Typecheck passes (`npm run typecheck:core`)"
+  ]
+}
+```
+
+### Queue Job Story
+
+```json
+{
+  "title": "Create [jobName] queue handler",
+  "acceptanceCriteria": [
+    "Add job handler in `packages/queue/src/`",
+    "Define job payload schema with Zod",
+    "Implement job processing logic",
+    "Handle errors and retries appropriately",
+    "Typecheck passes"
+  ]
+}
+```
+
+### Integration Story
+
+```json
+{
+  "title": "Connect [component] to [entity] API",
+  "acceptanceCriteria": [
+    "Use TanStack Query hooks for data fetching",
+    "Handle loading/error states with appropriate UI feedback",
+    "Display data in component",
+    "Typecheck passes"
+  ]
+}
+```
+
+## Ordering Rules
+
+1. **Database first** - Schema must exist before domain logic
+2. **Core before functions** - Domain models before API handlers
+3. **Backend before frontend** - API must exist before dashboard calls it
+4. **Types before implementation** - Shared types/schemas before they're used
+5. **Core before edge cases** - Happy path before error handling
+6. **Flow nodes after schemas** - Node definitions after underlying data structures
 
 ## Error Handling
 
 - If Linear ticket not found, ask user to verify the ID
 - If description is too vague, ask clarifying questions
-- If prd.json has incomplete stories (passes: false), ask whether to append or replace
+- If existing prd.json or progress.json files are found, they will be automatically removed (inform the user)
 
 ## Example Invocations
 
