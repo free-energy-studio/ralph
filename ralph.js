@@ -3,16 +3,16 @@
 import { $ } from "bun";
 
 const MAX_ITERATIONS = parseInt(process.argv[2] || "25", 10);
-const SCRIPT_DIR = import.meta.dir;
+const RALPH_DIR = `${process.cwd()}/.ralph`;
 
 console.log("🚀 Starting Ralph");
-console.log(`💡 Tip: In another terminal, run: tail -f ${SCRIPT_DIR}/progress.txt`);
+console.log(`💡 Tip: In another terminal, run: tail -f ${RALPH_DIR}/progress.txt`);
 console.log("");
 
 for (let i = 1; i <= MAX_ITERATIONS; i++) {
   console.log(`═══ Iteration ${i} ═══`);
 
-  const prompt = await Bun.file(`${SCRIPT_DIR}/prompt.md`).text();
+  const prompt = await Bun.file(`${RALPH_DIR}/prompt.md`).text();
 
   const proc = Bun.spawn(["claude", "--dangerously-skip-permissions"], {
     stdin: new Response(prompt),
