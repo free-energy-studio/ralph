@@ -20,13 +20,25 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
     stderr: "pipe",
   });
 
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
+  let output = "";
 
-  const output = stdout + stderr;
-  process.stdout.write(output);
+  // Stream output in real-time while capturing it
+  const streamOutput = async (stream, target) => {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      output += text;
+      target.write(text);
+    }
+  };
+
+  await Promise.all([
+    streamOutput(proc.stdout, process.stdout),
+    streamOutput(proc.stderr, process.stderr),
+  ]);
 
   if (output.includes("<promise>COMPLETE</promise>")) {
     console.log("✅ Done!");
