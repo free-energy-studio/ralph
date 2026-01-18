@@ -1,5 +1,9 @@
 {
   "name": "ralph",
   "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "ralph": "./ralph.js"
+  },
   "dependencies": {}
 }
