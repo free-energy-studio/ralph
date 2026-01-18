@@ -15,7 +15,7 @@ The user will provide either:
 Before generating a new PRD, check for existing files:
 
 1. Check if `ralph/prd.json` exists
-2. Check if `ralph/progress.json` exists
+2. Check if `ralph/progress.txt` exists
 
 If either file exists:
 - Delete both files (they are a pair and should be regenerated together)
@@ -263,7 +263,7 @@ Provide a summary explaining:
 
 - If Linear ticket not found, ask user to verify the ID
 - If description is too vague, ask clarifying questions
-- If existing prd.json or progress.json files are found, they will be automatically removed (inform the user)
+- If existing prd.json or progress.txt files are found, they will be automatically removed (inform the user)
 
 ## Example Invocations
 
