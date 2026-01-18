@@ -1,24 +1,14 @@
 # PRD Skill
 
-Generate Product Requirements Documents (PRDs) for Ralph Loop from Linear tickets or descriptions.
+Generate Product Requirements Documents (PRDs) for Ralph from Linear tickets or descriptions.
+
+## Overview
+
+This skill helps you create structured PRDs that Ralph can execute. It breaks down features into small, atomic user stories with explicit acceptance criteria.
 
 ## Installation
 
-The skill is located in `.claude/skills/prd/` and should be automatically discovered by Claude Code.
-
-If it's not working, you may need to:
-
-1. **Copy to global skills directory:**
-```bash
-mkdir -p ~/.config/amp/skills/
-cp -r .claude/skills/prd ~/.config/amp/skills/
-```
-
-2. **Or symlink it:**
-```bash
-mkdir -p ~/.config/amp/skills/
-ln -s "$(pwd)/.claude/skills/prd" ~/.config/amp/skills/prd
-```
+The skill is located in `.claude/skills/prd/` and is automatically discovered by Claude Code when you're in the ralph project directory.
 
 ## Usage
 
@@ -49,15 +39,17 @@ If your Linear tickets use a consistent prefix, you can just use the number.
 ## What It Does
 
 1. **Parses input** - Detects if it's a Linear ticket or description
-2. **Fetches Linear data** (if applicable) - Gets title, description, criteria
-3. **Breaks down features** - Creates small, focused user stories
-4. **Generates PRD** - Updates `scripts/ralph/prd.json` with stories
-5. **Assigns priorities** - Orders stories for logical implementation
-6. **Provides summary** - Shows what was created and next steps
+2. **Fetches Linear data** (if applicable) - Gets title, description, criteria, and git branch name
+3. **Explores the codebase** - Finds relevant patterns and existing implementations
+4. **Asks clarifying questions** - Scope, behavior, edge cases
+5. **Breaks down features** - Creates small, atomic user stories
+6. **Generates PRD** - Creates `.ralph/prd.json` with stories
+7. **Assigns priorities** - Orders stories for logical implementation (database → core → API → UI)
+8. **Provides summary** - Shows what was created and next steps
 
 ## Output
 
-The skill updates `scripts/ralph/prd.json` with user stories like:
+The skill creates `.ralph/prd.json` with user stories like:
 
 ```json
 {
@@ -85,10 +77,10 @@ The skill updates `scripts/ralph/prd.json` with user stories like:
 
 The skill follows Ralph best practices:
 
-- **Small stories** - Each fits in one context window
+- **Atomic stories** - Single responsibility, 1-3 files changed
 - **Explicit criteria** - Testable, specific requirements
 - **Fast feedback** - Always includes "typecheck passes"
-- **Logical ordering** - Dependencies via priority
+- **Logical ordering** - Database → Core → API → UI via priority
 
 ## Examples
 
@@ -126,9 +118,12 @@ Might generate:
 After generating a PRD:
 
 ```bash
-# Run Ralph Loop
-./scripts/ralph/ralph.sh 25
+# Run Ralph
+bun ralph.js 25
 
-# Monitor progress
-cat scripts/ralph/prd.json | jq '.userStories[] | {id, passes}'
+# Monitor progress in real-time
+tail -f .ralph/progress.txt
+
+# Check story status
+cat .ralph/prd.json | jq '.userStories[] | {id, passes}'
 ```

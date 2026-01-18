@@ -2,8 +2,8 @@
 
 ## Your Task
 
-1. Read `ralph/prd.json`
-2. Read `ralph/progress.txt` if it exists, otherwise create it with a "## Codebase Patterns" header
+1. Read `.ralph/prd.json`
+2. Read `.ralph/progress.txt` if it exists, otherwise create it with a "## Codebase Patterns" header
 3. Note the current branch name (this is the `baseBranch` to merge back into)
 4. Checkout to the branch specified in `branchName` (create it if it doesn't exist)
 5. Push the branch and create a **draft PR** using `gh pr create --draft --base <baseBranch>`

@@ -1,4 +1,13 @@
-# Ralph Loop - PRD Creation Guide
+# Ralph
+
+An autonomous AI agent loop that implements features using Claude Code. Ralph takes a PRD (Product Requirements Document) with user stories and iteratively completes them, tracking progress and learnings along the way.
+
+## How It Works
+
+1. You provide a PRD with user stories in `.ralph/prd.json`
+2. Ralph runs Claude in a loop, completing one story per iteration
+3. After each story, Ralph commits changes and updates progress
+4. When all stories pass, Ralph marks the PR ready for review
 
 ## Quick Start
 
@@ -6,60 +15,58 @@
 
 1. Generate PRD from Linear ticket: `/prd LIN-123`
 2. Or from description: `/prd "Add user authentication"`
-3. Run Ralph: `./ralph/ralph.sh 25`
-4. Monitor progress in `progress.txt`
+3. Run Ralph: `bun ralph.js 25`
+4. Monitor progress: `tail -f .ralph/progress.txt`
 
 ### Option 2: Manual PRD Creation
 
-1. Edit `prd.json` with your user stories
-2. Run `./ralph/ralph.sh 25`
-3. Monitor progress in `progress.txt`
+1. Create `.ralph/prd.json` with your user stories (see structure below)
+2. Run Ralph: `bun ralph.js 25`
+3. Monitor progress: `tail -f ralph/progress.txt`
+
+## Installation
+
+Ralph requires [Bun](https://bun.sh) and [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code).
+
+```bash
+# Clone into your project
+git clone https://github.com/yourusername/ralph.git
+
+# Or copy the files
+cp -r ralph/ your-project/ralph/
+```
 
 ## /prd Command
 
 The `/prd` skill automatically generates user stories from Linear tickets or descriptions.
 
-### Installation
-
-Run the install script once:
-```bash
-./ralph/install-prd-skill.sh
-```
-
-### Usage
-
 **From Linear Ticket:**
 ```bash
 /prd LIN-123
 ```
-Fetches the ticket and breaks it into small user stories.
 
 **From Description:**
 ```bash
 /prd "Add user profile page with avatar upload"
 ```
-Analyzes the description and creates focused stories.
 
 **From Ticket Number:**
 ```bash
 /prd 123
 ```
-Works if your Linear workspace has a consistent prefix.
 
-### What It Does
+The skill will:
+1. Detect if input is a Linear ticket or description
+2. Fetch Linear ticket details (if applicable)
+3. Break down the feature into small, implementable stories
+4. Create `.ralph/prd.json` with proper acceptance criteria
+5. Assign priorities in logical implementation order
 
-1. Detects if input is a Linear ticket or description
-2. Fetches Linear ticket details (if applicable)
-3. Breaks down the feature into small, implementable stories
-4. Updates `ralph/prd.json` with proper acceptance criteria
-5. Assigns priorities in logical implementation order
-6. Provides a summary of what was created
-
-See `.claude/skills/prd/README.md` for more details.
+See [.claude/skills/prd/README.md](.claude/skills/prd/README.md) for more details.
 
 ## PRD Structure
 
-### Required Fields
+Create `.ralph/prd.json` with this structure:
 
 ```json
 {
@@ -84,13 +91,15 @@ See `.claude/skills/prd/README.md` for more details.
 
 ### Field Descriptions
 
-- **branchName** - Git branch Ralph will use/create
-- **id** - Unique identifier (e.g., US-001, US-002)
-- **title** - Short, descriptive name for the story
-- **acceptanceCriteria** - Array of specific, testable requirements
-- **priority** - Lower number = higher priority (Ralph does these first)
-- **passes** - Set to `false` initially, Ralph sets to `true` when complete
-- **notes** - Optional context or implementation hints
+| Field | Description |
+|-------|-------------|
+| `branchName` | Git branch Ralph will create/use |
+| `id` | Unique identifier (e.g., US-001, US-002) |
+| `title` | Short, descriptive name for the story |
+| `acceptanceCriteria` | Array of specific, testable requirements |
+| `priority` | Lower number = higher priority (Ralph does these first) |
+| `passes` | Set to `false` initially, Ralph sets to `true` when complete |
+| `notes` | Optional context or implementation hints |
 
 ## Critical Success Factors
 
@@ -226,20 +235,27 @@ Ralph updates `AGENTS.md` when it discovers reusable patterns:
 
 ```bash
 # Standard run (25 iterations max)
-./ralph/ralph.sh 25
+bun ralph.js 25
 
 # Shorter run for testing
-./ralph/ralph.sh 5
+bun ralph.js 5
 ```
+
+Ralph will:
+- Create a git branch from `branchName`
+- Open a draft PR
+- Complete stories one at a time
+- Commit after each story: `feat: [ID] - [Title]`
+- Mark PR ready when all stories pass
 
 ## Monitoring Progress
 
 ```bash
-# Check which stories are complete
-cat ralph/prd.json | jq '.userStories[] | {id, passes}'
+# Watch progress in real-time
+tail -f .ralph/progress.txt
 
-# View learnings
-cat ralph/progress.txt
+# Check which stories are complete
+cat .ralph/prd.json | jq '.userStories[] | {id, passes}'
 
 # See commits
 git log --oneline -10
@@ -265,26 +281,17 @@ After editing schema, check:
 
 **Fixing related files is OK** - If typecheck requires other changes, make them. That's not scope creep.
 
-## Browser Testing
+## How Ralph Works
 
-For UI changes, use the dev-browser skill by @sawyerhood:
+Each iteration, Ralph:
+1. Reads `.ralph/prd.json` for user stories
+2. Reads `.ralph/progress.txt` for codebase learnings
+3. Picks the highest priority story where `passes: false`
+4. Implements that ONE story
+5. Runs typecheck and tests
+6. Commits with format: `feat: [ID] - [Title]`
+7. Updates `prd.json` to mark story as `passes: true`
+8. Appends learnings to `progress.txt`
+9. Repeats until all stories pass or max iterations reached
 
-```bash
-# Start the browser server
-~/.config/amp/skills/dev-browser/server.sh &
-
-# Write test script
-cd ~/.config/amp/skills/dev-browser && npx tsx <<'EOF'
-import { connect, waitForPageLoad } from "@/client.js";
-const client = await connect();
-const page = await client.page("test");
-await page.setViewportSize({ width: 1280, height: 900 });
-const port = process.env.PORT || "3000";
-await page.goto(`http://localhost:${port}/your-page`);
-await waitForPageLoad(page);
-await page.screenshot({ path: "tmp/screenshot.png" });
-await client.disconnect();
-EOF
-```
-
-**Not complete until verified with screenshot.**
+When complete, Ralph outputs `<promise>COMPLETE</promise>` and marks the PR ready for review.
