@@ -12,7 +12,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "═══ Iteration $i ═══"
 
   OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" \
-    | claude --dangerously-skip-permissions 2>&1) || true
+    | claude --dangerously-skip-permissions 2>&1 | tee /dev/stderr) || true
 
   if echo "$OUTPUT" | \
     grep -q "<promise>COMPLETE</promise>"
