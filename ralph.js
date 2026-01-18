@@ -15,10 +15,12 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
 
   const prompt = await Bun.file(`${SCRIPT_DIR}/prompt.md`).text();
 
+  const { ANTHROPIC_API_KEY, ...env } = process.env;
   const proc = Bun.spawn(["claude", "--dangerously-skip-permissions"], {
     stdin: new Response(prompt),
     stdout: "pipe",
     stderr: "pipe",
+    env,
   });
 
   let output = "";
