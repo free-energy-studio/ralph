@@ -29,11 +29,24 @@ An autonomous AI agent loop that implements features using Claude Code. Ralph ta
 Ralph requires [Bun](https://bun.sh) and [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code).
 
 ```bash
-# Clone into your project
-git clone https://github.com/yourusername/ralph.git
+# Add to your project
+bun add github:free-energy-studio/ralph
+```
 
-# Or copy the files
-cp -r ralph/ your-project/ralph/
+Or add to your `package.json`:
+
+```json
+{
+  "dependencies": {
+    "ralph": "github:free-energy-studio/ralph"
+  }
+}
+```
+
+Then run with:
+
+```bash
+bun node_modules/ralph/ralph.js 25
 ```
 
 ## /prd Command
