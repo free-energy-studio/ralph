@@ -14,8 +14,8 @@ The user will provide either:
 
 Before generating a new PRD, check for existing files:
 
-1. Check if `ralph/prd.json` exists
-2. Check if `ralph/progress.txt` exists
+1. Check if `.ralph/prd.json` exists
+2. Check if `.ralph/progress.txt` exists
 
 If either file exists:
 - Delete both files (they are a pair and should be regenerated together)
@@ -116,7 +116,7 @@ Create the PRD with this structure:
 }
 ```
 
-Write the PRD to `ralph/prd.json`.
+Write the PRD to `.ralph/prd.json`.
 
 ### Phase 7: Summary
 
@@ -126,7 +126,7 @@ Provide a summary explaining:
 3. Any assumptions made
 4. Number of stories created with IDs and titles
 5. Suggested first story to start with
-6. Next steps (run `./ralph/ralph.sh 25`)
+6. Next steps (run `./.ralph/ralph.sh 25`)
 
 ## Story Templates
 
