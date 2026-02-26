@@ -1,7 +1,0 @@
-{
-  "name": "prd",
-  "description": "Generate PRD from Linear ticket or description",
-  "version": "1.0.0",
-  "invoke": "skill.md",
-  "userInvocable": true
-}
