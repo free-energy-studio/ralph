@@ -14,7 +14,7 @@ import { resolve, join, relative } from "path";
 
 const PROJECT_DIR = process.cwd();
 const RALPH_DIR = import.meta.dir;
-const SKILL_SRC = join(RALPH_DIR, ".claude", "skills", "prd");
+const SKILL_SRC = join(RALPH_DIR, "skills", "prd");
 const SKILL_DEST_DIR = join(PROJECT_DIR, ".claude", "skills");
 const SKILL_DEST = join(SKILL_DEST_DIR, "prd");
 const GITIGNORE = join(PROJECT_DIR, ".gitignore");
