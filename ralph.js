@@ -1,30 +1,34 @@
 #!/usr/bin/env bun
 
-import { $ } from "bun";
-
 const MAX_ITERATIONS = parseInt(process.argv[2] || "25", 10);
 const SCRIPT_DIR = import.meta.dir;
 const RALPH_DIR = `${process.cwd()}/.ralph`;
+const PROMPT_PATH = `${SCRIPT_DIR}/prompt.md`;
 
 console.log("🚀 Starting Ralph");
-console.log(`💡 Tip: In another terminal, run: tail -f ${RALPH_DIR}/progress.txt`);
+console.log(`💡 Tip: tail -f ${RALPH_DIR}/progress.txt`);
 console.log("");
 
 for (let i = 1; i <= MAX_ITERATIONS; i++) {
-  console.log(`═══ Iteration ${i} ═══`);
-
-  const prompt = await Bun.file(`${SCRIPT_DIR}/prompt.md`).text();
+  console.log(`\n═══ Iteration ${i}/${MAX_ITERATIONS} ═══\n`);
 
   const { ANTHROPIC_API_KEY, ...env } = process.env;
-  const proc = Bun.spawn(["claude", "--dangerously-skip-permissions", "-p", prompt], {
-    stdout: "pipe",
-    stderr: "pipe",
-    env,
-  });
+  const proc = Bun.spawn(
+    [
+      "claude",
+      "--dangerously-skip-permissions",
+      "-p",
+      `Read the file ${PROMPT_PATH} and follow its instructions exactly.`,
+    ],
+    {
+      stdout: "pipe",
+      stderr: "pipe",
+      env,
+    }
+  );
 
   let output = "";
 
-  // Stream output in real-time while capturing it
   const streamOutput = async (stream, target) => {
     const reader = stream.getReader();
     const decoder = new TextDecoder();
@@ -42,9 +46,16 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
     streamOutput(proc.stderr, process.stderr),
   ]);
 
+  const code = await proc.exited;
+  console.log(`\n--- Iteration ${i} exited with code ${code} ---`);
+
   if (output.includes("<promise>COMPLETE</promise>")) {
-    console.log("✅ Done!");
+    console.log("✅ All stories complete!");
     process.exit(0);
+  }
+
+  if (code !== 0) {
+    console.log("⚠️  Non-zero exit, retrying...");
   }
 
   await Bun.sleep(2000);
