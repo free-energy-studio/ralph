@@ -15,24 +15,14 @@ Verify: `ls node_modules/ralph/ralph.js` and `.claude/skills/prd/` exists (symli
 
 ## Flow
 
-### 1. Ensure Ticket Exists
+### 1. Discovery & Q/A
 
-Every task requires a Linear ticket. If one doesn't exist:
-
-1. Gather requirements — what, why, acceptance criteria, edge cases, dependencies
-2. Create the ticket with enough detail that a developer with zero context could implement it
-3. Assign it and set status to **To Do**
-
-If ticket exists, move it to **To Do** if not already.
-
-### 2. Discovery & Q/A (Optional)
-
-Before generating a PRD, assess whether the ticket has enough detail. If any of the following are unclear, research and ask before proceeding:
+Before writing any code, understand the problem:
 
 - **Scope** — What's in, what's out?
 - **Existing patterns** — How does the codebase handle similar features?
 - **Dependencies** — Does this touch other features or require migrations?
-- **Edge cases** — What could go wrong? What about empty states, permissions, error handling?
+- **Edge cases** — What could go wrong? Empty states, permissions, error handling?
 - **UX expectations** — Any specific UI patterns, copy, or interactions expected?
 
 **How to research:**
@@ -40,7 +30,15 @@ Before generating a PRD, assess whether the ticket has enough detail. If any of 
 2. Check related tickets or PRs for context
 3. Ask the assigner specific questions — don't guess on ambiguous requirements
 
-**When to skip:** If the ticket has clear acceptance criteria, the codebase pattern is obvious, and scope is well-defined, go straight to PRD generation.
+**When to move on:** When scope is clear, questions are answered, and you could explain the task to another developer.
+
+### 2. Create or Update Ticket
+
+Every task requires a Linear ticket with enough detail that a developer with zero context could implement it.
+
+- **No ticket exists?** Create one with: what, why, acceptance criteria, edge cases, dependencies
+- **Ticket exists but vague?** Update it with findings from discovery
+- Move ticket to **To Do**
 
 ### 3. Generate PRD
 
