@@ -1,9 +1,13 @@
 {
   "name": "ralph",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "type": "module",
   "bin": {
-    "ralph": "./ralph.js"
+    "ralph": "./ralph.js",
+    "ralph-init": "./init.js"
+  },
+  "scripts": {
+    "postinstall": "node init.js || true"
   },
   "dependencies": {}
 }

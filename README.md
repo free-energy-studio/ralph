@@ -1,85 +1,77 @@
 # Ralph
 
-An autonomous AI agent loop that implements features using Claude Code. Ralph takes a PRD (Product Requirements Document) with user stories and iteratively completes them, tracking progress and learnings along the way.
-
-## How It Works
-
-1. You provide a PRD with user stories in `.ralph/prd.json`
-2. Ralph runs Claude in a loop, completing one story per iteration
-3. After each story, Ralph commits changes and updates progress
-4. When all stories pass, Ralph marks the PR ready for review
-
-## Quick Start
-
-### Option 1: Use the /prd Command (Recommended)
-
-1. Generate PRD from Linear ticket: `/prd LIN-123`
-2. Or from description: `/prd "Add user authentication"`
-3. Run Ralph: `bun ralph.js 25`
-4. Monitor progress: `tail -f .ralph/progress.txt`
-
-### Option 2: Manual PRD Creation
-
-1. Create `.ralph/prd.json` with your user stories (see structure below)
-2. Run Ralph: `bun ralph.js 25`
-3. Monitor progress: `tail -f ralph/progress.txt`
+Autonomous AI agent loop that implements features using Claude Code. Give it a PRD with user stories, it codes them, commits, and opens a PR.
 
 ## Installation
 
-Ralph requires [Bun](https://bun.sh) and [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code).
-
 ```bash
-# Add to your project
 bun add github:free-energy-studio/ralph
 ```
 
-Or add to your `package.json`:
+On install, Ralph automatically:
+- Adds `.ralph/` to `.gitignore`
+- Symlinks the `/prd` Claude Code skill into your project
 
-```json
-{
-  "dependencies": {
-    "ralph": "github:free-energy-studio/ralph"
-  }
-}
+To re-run setup manually:
+```bash
+bunx ralph-init
 ```
 
-Then run with:
+### Requirements
+
+- [Bun](https://bun.sh)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- [GitHub CLI](https://cli.github.com/) (`gh`) — authenticated
+
+## Usage
+
+### 1. Generate PRD
+
+In Claude Code:
+```
+/prd DEN-381        # from Linear ticket
+/prd "Add auth"     # from description
+```
+
+This creates `.ralph/prd.json` with atomic user stories.
+
+### 2. Run Ralph
 
 ```bash
-bun node_modules/ralph/ralph.js 25
+bun ralph 25          # 25 iterations max (default)
+bun ralph 5           # shorter run
 ```
 
-## /prd Command
+Ralph will:
+- Create a feature branch + draft PR
+- Implement stories one at a time, committing each
+- Mark PR ready when all stories pass
 
-The `/prd` skill automatically generates user stories from Linear tickets or descriptions.
+### 3. Monitor
 
-**From Linear Ticket:**
 ```bash
-/prd LIN-123
+tail -f .ralph/progress.txt
+cat .ralph/prd.json | jq '.userStories[] | {id, passes}'
 ```
 
-**From Description:**
-```bash
-/prd "Add user profile page with avatar upload"
+## Development Workflow
+
+Full workflow when used with Linear + Cursor Bug Bot:
+
+```
+Ticket → /prd → Ralph → Bug Bot fix loop → QA Review → Merge
 ```
 
-**From Ticket Number:**
-```bash
-/prd 123
-```
+1. **Ticket** — every task needs a Linear ticket with full context
+2. **PRD** — `/prd TICKET-ID` generates atomic user stories
+3. **Ralph** — `bun ralph 25` implements and opens PR
+4. **Bug Bot** — wait for Cursor Bug Bot (2-10 min), fix any comments with another Ralph loop
+5. **QA** — move to QA Review, assign to reviewer
+6. **Merge** — reviewer merges
 
-The skill will:
-1. Detect if input is a Linear ticket or description
-2. Fetch Linear ticket details (if applicable)
-3. Break down the feature into small, implementable stories
-4. Create `.ralph/prd.json` with proper acceptance criteria
-5. Assign priorities in logical implementation order
-
-See [.claude/skills/prd/README.md](.claude/skills/prd/README.md) for more details.
+See [DEV-WORKFLOW.md](https://github.com/free-energy-studio/ralph/blob/main/DEV-WORKFLOW.md) for full details.
 
 ## PRD Structure
-
-Create `.ralph/prd.json` with this structure:
 
 ```json
 {
@@ -87,224 +79,38 @@ Create `.ralph/prd.json` with this structure:
   "userStories": [
     {
       "id": "US-001",
-      "title": "Short descriptive title",
+      "title": "Add user table schema",
       "acceptanceCriteria": [
-        "Specific criterion 1",
-        "Specific criterion 2",
-        "typecheck passes",
-        "tests pass"
+        "Create users table with id, email, name fields",
+        "Add unique index on email",
+        "Typecheck passes"
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "Use existing drizzle patterns"
     }
   ]
 }
 ```
 
-### Field Descriptions
+**Stories must be atomic** — one responsibility, 1-3 files, independently verifiable.
 
-| Field | Description |
-|-------|-------------|
-| `branchName` | Git branch Ralph will create/use |
-| `id` | Unique identifier (e.g., US-001, US-002) |
-| `title` | Short, descriptive name for the story |
-| `acceptanceCriteria` | Array of specific, testable requirements |
-| `priority` | Lower number = higher priority (Ralph does these first) |
-| `passes` | Set to `false` initially, Ralph sets to `true` when complete |
-| `notes` | Optional context or implementation hints |
+## How It Works
 
-## Critical Success Factors
+Each iteration Ralph:
+1. Reads `.ralph/prd.json` and `.ralph/progress.txt`
+2. Picks highest priority story where `passes: false`
+3. Implements that ONE story
+4. Runs typecheck/tests
+5. Commits: `feat: [ID] - [Title]`
+6. Updates prd.json and progress.txt
+7. Repeats until done or max iterations
 
-### 1. Small Stories
-
-Stories MUST fit in one context window.
-
-❌ **Too big:**
-```
-"Build entire auth system"
-```
-
-✅ **Right size:**
-```
-"Add login form"
-"Add email validation"
-"Add auth server action"
-```
-
-### 2. Explicit Criteria
-
-Be specific and testable. Avoid vague requirements.
-
-❌ **Vague:**
-```json
-"acceptanceCriteria": [
-  "Users can log in"
-]
-```
-
-✅ **Explicit:**
-```json
-"acceptanceCriteria": [
-  "Email/password fields exist",
-  "Validates email format",
-  "Shows error on failure",
-  "typecheck passes",
-  "Verify at localhost:3000/login"
-]
-```
-
-### 3. Fast Feedback Loops
-
-Ralph needs fast validation:
-
-- Always include `"typecheck passes"` in criteria
-- Always include `"tests pass"` if you have tests
-- Without these, broken code compounds
-
-### 4. Learnings Compound
-
-By story 10, Ralph knows patterns from stories 1-9.
-
-- Ralph appends to `progress.txt` after each story
-- Codebase patterns accumulate at the top
-- Later stories benefit from earlier learnings
-
-### 5. AGENTS.md Updates
-
-Ralph updates `AGENTS.md` when it discovers reusable patterns:
-
-✅ **Good additions:**
-- "When modifying X, also update Y"
-- "This module uses pattern Z"
-- "Tests require dev server running"
-
-❌ **Don't add:**
-- Story-specific details
-- Temporary notes
-- Info already in progress.txt
-
-## Example PRD
-
-```json
-{
-  "branchName": "ralph/user-auth",
-  "userStories": [
-    {
-      "id": "US-001",
-      "title": "Create user login form",
-      "acceptanceCriteria": [
-        "Form has email and password fields",
-        "Email field validates format",
-        "Password field is masked",
-        "Submit button exists",
-        "typecheck passes"
-      ],
-      "priority": 1,
-      "passes": false,
-      "notes": "Use existing form components from /components/ui"
-    },
-    {
-      "id": "US-002",
-      "title": "Add login form validation",
-      "acceptanceCriteria": [
-        "Shows error when email is invalid",
-        "Shows error when password is too short",
-        "Disables submit when form is invalid",
-        "Clears errors on input change",
-        "typecheck passes"
-      ],
-      "priority": 2,
-      "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-003",
-      "title": "Create login server action",
-      "acceptanceCriteria": [
-        "Server action accepts email and password",
-        "Validates credentials against database",
-        "Returns success/error status",
-        "Sets session cookie on success",
-        "typecheck passes",
-        "tests pass"
-      ],
-      "priority": 3,
-      "passes": false,
-      "notes": "Follow existing server action pattern in /app/actions"
-    }
-  ]
-}
-```
+When all stories pass, outputs `<promise>COMPLETE</promise>` and marks PR ready.
 
 ## When NOT to Use Ralph
 
-- **Exploratory work** - Ralph needs clear goals
-- **Major refactors** - Without explicit criteria
-- **Security-critical code** - Needs human review
-- **Anything needing human judgment** - Design decisions, etc.
-
-## Running Ralph
-
-```bash
-# Standard run (25 iterations max)
-bun ralph.js 25
-
-# Shorter run for testing
-bun ralph.js 5
-```
-
-Ralph will:
-- Create a git branch from `branchName`
-- Open a draft PR
-- Complete stories one at a time
-- Commit after each story: `feat: [ID] - [Title]`
-- Mark PR ready when all stories pass
-
-## Monitoring Progress
-
-```bash
-# Watch progress in real-time
-tail -f .ralph/progress.txt
-
-# Check which stories are complete
-cat .ralph/prd.json | jq '.userStories[] | {id, passes}'
-
-# See commits
-git log --oneline -10
-```
-
-## Common Gotchas
-
-### Idempotent Migrations
-```sql
-ADD COLUMN IF NOT EXISTS email TEXT;
-```
-
-### Interactive Prompts
-```bash
-echo -e "\n\n\n" | npm run db:generate
-```
-
-### Schema Changes
-After editing schema, check:
-- Server actions
-- UI components
-- API routes
-
-**Fixing related files is OK** - If typecheck requires other changes, make them. That's not scope creep.
-
-## How Ralph Works
-
-Each iteration, Ralph:
-1. Reads `.ralph/prd.json` for user stories
-2. Reads `.ralph/progress.txt` for codebase learnings
-3. Picks the highest priority story where `passes: false`
-4. Implements that ONE story
-5. Runs typecheck and tests
-6. Commits with format: `feat: [ID] - [Title]`
-7. Updates `prd.json` to mark story as `passes: true`
-8. Appends learnings to `progress.txt`
-9. Repeats until all stories pass or max iterations reached
-
-When complete, Ralph outputs `<promise>COMPLETE</promise>` and marks the PR ready for review.
+- Exploratory/research work
+- Major refactors without clear criteria
+- Security-critical code (needs human review)
+- Design decisions requiring judgment
