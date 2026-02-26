@@ -25,7 +25,24 @@ Every task requires a Linear ticket. If one doesn't exist:
 
 If ticket exists, move it to **To Do** if not already.
 
-### 2. Generate PRD
+### 2. Discovery & Q/A (Optional)
+
+Before generating a PRD, assess whether the ticket has enough detail. If any of the following are unclear, research and ask before proceeding:
+
+- **Scope** — What's in, what's out?
+- **Existing patterns** — How does the codebase handle similar features?
+- **Dependencies** — Does this touch other features or require migrations?
+- **Edge cases** — What could go wrong? What about empty states, permissions, error handling?
+- **UX expectations** — Any specific UI patterns, copy, or interactions expected?
+
+**How to research:**
+1. Explore relevant code — schemas, routes, components, tests
+2. Check related tickets or PRs for context
+3. Ask the assigner specific questions — don't guess on ambiguous requirements
+
+**When to skip:** If the ticket has clear acceptance criteria, the codebase pattern is obvious, and scope is well-defined, go straight to PRD generation.
+
+### 3. Generate PRD
 
 In Claude Code (in the project directory):
 
@@ -37,7 +54,7 @@ This creates `.ralph/prd.json` with atomic user stories. Review the output — s
 
 If `/prd` command is not available, run `bunx ralph-init` to set up the skill symlink.
 
-### 3. Run Ralph
+### 4. Run Ralph
 
 ```bash
 bun node_modules/ralph/ralph.js 25
@@ -48,7 +65,7 @@ bun node_modules/ralph/ralph.js 25
 - Ralph marks the PR ready when all stories pass
 - Move ticket to **In Progress** when Ralph starts
 
-### 4. Bug Bot Loop
+### 5. Bug Bot Loop
 
 After Ralph completes and the PR is ready for review:
 
@@ -60,7 +77,7 @@ After Ralph completes and the PR is ready for review:
    - Repeat until Bug Bot produces no new comments
 4. If clean — proceed to step 5
 
-### 5. QA Handoff
+### 6. QA Handoff
 
 When Bug Bot passes clean:
 
