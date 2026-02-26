@@ -19,6 +19,9 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
       "--dangerously-skip-permissions",
       "-p",
       `Read the file ${PROMPT_PATH} and follow its instructions exactly.`,
+      "--output-format",
+      "stream-json",
+      "--verbose",
     ],
     {
       stdout: "pipe",
@@ -27,39 +30,88 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
     }
   );
 
-  let output = "";
+  let resultText = "";
+  let lastToolName = "";
 
-  const streamOutput = async (stream, target) => {
-    const reader = stream.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const text = decoder.decode(value, { stream: true });
-      output += text;
-      target.write(text);
+  // Parse stream-json lines and print human-readable progress
+  const reader = proc.stdout.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // Process complete lines
+    const lines = buffer.split("\n");
+    buffer = lines.pop(); // keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const event = JSON.parse(line);
+
+        if (event.type === "assistant" && event.message?.content) {
+          for (const block of event.message.content) {
+            if (block.type === "tool_use") {
+              lastToolName = block.name;
+              const input = block.input || {};
+              const detail =
+                input.command?.slice(0, 80) ||
+                input.file_path ||
+                input.pattern ||
+                "";
+              console.log(`  🔧 ${block.name}${detail ? `: ${detail}` : ""}`);
+            }
+            if (block.type === "text" && block.text) {
+              console.log(`  💬 ${block.text.slice(0, 200)}`);
+            }
+          }
+        }
+
+        if (event.type === "result") {
+          resultText = event.result || "";
+          console.log(
+            `\n  ⏱  ${(event.duration_ms / 1000).toFixed(0)}s | $${event.total_cost_usd?.toFixed(3) || "?"}`
+          );
+        }
+      } catch {
+        // non-JSON line, ignore
+      }
     }
-  };
+  }
 
-  await Promise.all([
-    streamOutput(proc.stdout, process.stdout),
-    streamOutput(proc.stderr, process.stderr),
-  ]);
+  // drain stderr
+  const stderrReader = proc.stderr.getReader();
+  while (true) {
+    const { done } = await stderrReader.read();
+    if (done) break;
+  }
 
   const code = await proc.exited;
-  console.log(`\n--- Iteration ${i} exited with code ${code} ---`);
+  console.log(`  Exit code: ${code}`);
 
-  if (output.includes("<promise>COMPLETE</promise>")) {
-    console.log("✅ All stories complete!");
+  if (resultText.includes("<promise>COMPLETE</promise>")) {
+    console.log("\n✅ All stories complete!");
     process.exit(0);
   }
 
-  if (code !== 0) {
-    console.log("⚠️  Non-zero exit, retrying...");
-  }
+  // Backup check: look at prd.json directly
+  try {
+    const prd = JSON.parse(
+      await Bun.file(`${RALPH_DIR}/prd.json`).text()
+    );
+    const remaining = prd.userStories.filter((s) => !s.passes).length;
+    console.log(`  Stories remaining: ${remaining}`);
+    if (remaining === 0) {
+      console.log("\n✅ All stories complete!");
+      process.exit(0);
+    }
+  } catch {}
 
   await Bun.sleep(2000);
 }
 
-console.log("⚠️ Max iterations reached");
+console.log("\n⚠️ Max iterations reached");
 process.exit(1);
