@@ -13,9 +13,43 @@ MAX="${4:-3}"
 log() { echo "[bugbot-loop] $*" >&2; }
 
 get_bugbot_comments() {
-  su - ubuntu -c "gh api repos/$REPO/pulls/$PR/comments \
-    --jq '[.[] | select(.body | startswith(\"###\")) | {id: .id, body: .body, path: .path, line: .line}]'" 2>/dev/null \
+  local since="${1:-}"
+  local jq_filter
+  if [ -n "$since" ]; then
+    # Only comments posted after the given ISO timestamp
+    jq_filter="[.[] | select(.body | startswith(\"###\")) | select(.created_at > \"$since\") | {id: .id, body: .body, path: .path, line: .line}]"
+  else
+    jq_filter='[.[] | select(.body | startswith("###")) | {id: .id, body: .body, path: .path, line: .line}]'
+  fi
+  su - ubuntu -c "gh api repos/$REPO/pulls/$PR/comments --jq '$jq_filter'" 2>/dev/null \
     || echo "[]"
+}
+
+# Poll until Bug Bot has commented (or timeout)
+wait_for_bugbot() {
+  local since="$1"
+  local timeout="${2:-900}"   # 15 min default
+  local interval=60
+  local elapsed=0
+
+  log "Polling for Bug Bot comments (timeout ${timeout}s, every ${interval}s)..."
+  while [ "$elapsed" -lt "$timeout" ]; do
+    local comments
+    comments=$(get_bugbot_comments "$since")
+    local count
+    count=$(echo "$comments" | jq 'length' 2>/dev/null || echo "0")
+    if [ "$count" -gt 0 ]; then
+      log "Bug Bot posted $count comment(s) after ${elapsed}s"
+      echo "$comments"
+      return 0
+    fi
+    log "No comments yet (${elapsed}s elapsed)..."
+    sleep "$interval"
+    elapsed=$((elapsed + interval))
+  done
+
+  log "Timed out waiting for Bug Bot after ${timeout}s — assuming clean"
+  echo "[]"
 }
 
 generate_prd_from_comments() {
@@ -59,13 +93,14 @@ EOF
 iterations=0
 final_comments="[]"
 
+# Capture timestamp just before first check so we only see new comments
+push_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
 for i in $(seq 1 "$MAX"); do
   iterations=$i
-  log "Iteration $i/$MAX — waiting 5 min for Bug Bot..."
-  sleep 300
+  log "Iteration $i/$MAX — waiting for Bug Bot (push_time: $push_time)..."
 
-  log "Checking Bug Bot comments on PR #$PR..."
-  comments=$(get_bugbot_comments)
+  comments=$(wait_for_bugbot "$push_time")
   count=$(echo "$comments" | jq 'length' 2>/dev/null || echo "0")
 
   log "Found $count Bug Bot comment(s)"
@@ -96,7 +131,9 @@ for i in $(seq 1 "$MAX"); do
   log "Running Ralph..."
   su - ubuntu -c "cd $PROJECT && bun /opt/skills/ralph/scripts/ralph.js 25" >&2
 
-  log "Ralph done. Looping back to check Bug Bot..."
+  # New push timestamp so next iteration only sees comments after this push
+  push_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  log "Ralph done (new push_time: $push_time). Looping back to check Bug Bot..."
 done
 
 # Output structured result for Lobster
