@@ -9,11 +9,11 @@ Deterministic development flow: Ticket → PRD → Ralph → Bug Bot loop → QA
 
 ## Prerequisites
 
-1. **Non-root user** — Claude Code refuses `--dangerously-skip-permissions` as root. Create a dedicated user (e.g. `dev`) and ensure:
-   - Project files are owned by this user (`chown -R dev:dev /projects/myapp`)
-   - `git config --global --add safe.directory /projects/myapp`
-   - `gh auth login` completed for this user (needed for PR creation)
-   - `claude` CLI installed and authenticated (OAuth) for this user
+1. **Non-root dev user** — Claude Code refuses `--dangerously-skip-permissions` as root. All development work (git, file editing, ralph, claude code) must run as a dedicated non-root user (e.g. `dev`). Setup:
+   - Project files owned by this user (`chown -R dev:dev /projects/`)
+   - `gh auth login` completed (needed for push + PR creation)
+   - `claude` CLI installed and authenticated (OAuth)
+   - Root is only for system-level tasks (apt, services, openclaw)
 
 2. **Ralph installed** — `bun add github:free-energy-studio/ralph` in the target project. Postinstall handles `.gitignore` and `/prd` skill setup. If postinstall is blocked, run `bunx ralph-init`.
 
