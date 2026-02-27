@@ -64,18 +64,29 @@ if (!existsSync(SKILL_SRC)) {
 
 mkdirSync(SKILL_DEST_DIR, { recursive: true });
 
-if (existsSync(SKILL_DEST)) {
-  try {
-    const stat = lstatSync(SKILL_DEST);
-    if (stat.isSymbolicLink()) {
+let skillExists = false;
+try {
+  const stat = lstatSync(SKILL_DEST);
+  skillExists = true;
+  if (stat.isSymbolicLink()) {
+    // Check if symlink target exists; recreate if broken
+    if (existsSync(SKILL_DEST)) {
       console.log("✅ Skill: /prd already symlinked");
     } else {
-      console.log("⚠️  Skill: .claude/skills/prd exists but is not a symlink — skipping");
+      const { unlinkSync } = await import("fs");
+      unlinkSync(SKILL_DEST);
+      const relPath = relative(SKILL_DEST_DIR, SKILL_SRC);
+      symlinkSync(relPath, SKILL_DEST);
+      console.log("✅ Skill: /prd symlink was broken — recreated to", relPath);
     }
-  } catch {
-    console.log("⚠️  Skill: could not check .claude/skills/prd");
+  } else {
+    console.log("⚠️  Skill: .claude/skills/prd exists but is not a symlink — skipping");
   }
-} else {
+} catch {
+  // lstatSync throws if path doesn't exist at all
+}
+
+if (!skillExists) {
   const relPath = relative(SKILL_DEST_DIR, SKILL_SRC);
   symlinkSync(relPath, SKILL_DEST);
   console.log("✅ Skill: /prd symlinked to", relPath);
