@@ -58,37 +58,33 @@ This creates `.ralph/prd.json` with atomic user stories. Review the output — s
 
 If `/prd` command is not available, run `bunx ralph-init` to set up the skill symlink.
 
-### 4. Run Ralph
+### 4. Run the Dev Workflow (Lobster)
 
-```bash
-bun node_modules/ralph/ralph.js 25
+Run the full pipeline — Ralph + Bug Bot loop + QA handoff — as a single Lobster workflow:
+
+```
+Run the dev-workflow Lobster pipeline with ticket=DOMA-XXX
 ```
 
-- Ralph creates a feature branch, opens a draft PR, implements stories sequentially
-- Monitor: `tail -f .ralph/progress.txt`
-- Ralph marks the PR ready when all stories pass
-- Move ticket to **In Progress** when Ralph starts
+This runs `dev-workflow.lobster` which:
+1. Runs Ralph (up to 25 iterations)
+2. Waits 5 minutes for Bug Bot to post
+3. Shows you Bug Bot comments and **pauses for approval**
+4. If you approve (comments addressed or none) → moves ticket to QA Review
+5. If you deny → fix the issues, update `.ralph/prd.json`, and re-run
 
-### 5. Bug Bot Loop
+**The approval gate is mandatory. You cannot skip to QA without explicitly approving.**
 
-After Ralph completes and the PR is ready for review:
+If Bug Bot finds issues after you approve:
+- Update `.ralph/prd.json` with the Bug Bot comments as new user stories
+- Re-run the Lobster workflow
+- Repeat until Bug Bot is clean
 
-1. Wait for Cursor Bug Bot to run (2-10 minutes) — it posts PR comments with bugs
-2. Check PR comments: `gh pr view <number> --json comments,reviews`
-3. If Bug Bot found issues:
-   - Create a new `.ralph/prd.json` addressing the Bug Bot comments as user stories
-   - Run Ralph again: `bun node_modules/ralph/ralph.js 25`
-   - Repeat until Bug Bot produces no new comments
-4. If clean — proceed to step 5
+### 5. QA Handoff
 
-### 6. QA Handoff
+Handled automatically by the Lobster workflow on approval. Ticket moves to **QA Review**.
 
-When Bug Bot passes clean:
-
-1. Move ticket to **QA Review** in Linear
-2. Assign to the reviewer (typically Sam)
-3. Notify them the PR is ready
-4. **Do not merge** — reviewer merges after approval
+**Do not merge** — reviewer merges after approval.
 
 ## Decision Points
 
