@@ -9,7 +9,13 @@ Deterministic development flow: Ticket → PRD → Ralph → Bug Bot loop → QA
 
 ## Prerequisites
 
-The target project must have ralph installed (`bun add github:free-energy-studio/ralph`). If not, install it first — the postinstall script handles `.gitignore` and `/prd` skill setup.
+1. **Non-root user** — Claude Code refuses `--dangerously-skip-permissions` as root. Create a dedicated user (e.g. `dev`) and ensure:
+   - Project files are owned by this user (`chown -R dev:dev /projects/myapp`)
+   - `git config --global --add safe.directory /projects/myapp`
+   - `gh auth login` completed for this user (needed for PR creation)
+   - `claude` CLI installed and authenticated (OAuth) for this user
+
+2. **Ralph installed** — `bun add github:free-energy-studio/ralph` in the target project. Postinstall handles `.gitignore` and `/prd` skill setup. If postinstall is blocked, run `bunx ralph-init`.
 
 Verify: `ls node_modules/ralph/ralph.js` and `.claude/skills/prd/` exists (symlink).
 
