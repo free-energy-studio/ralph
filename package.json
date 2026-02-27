@@ -3,11 +3,11 @@
   "version": "1.1.10",
   "type": "module",
   "bin": {
-    "ralph": "./ralph.js",
-    "ralph-init": "./init.js"
+    "ralph": "./skills/ralph/scripts/ralph.js",
+    "ralph-init": "./skills/ralph/scripts/init.js"
   },
   "scripts": {
-    "postinstall": "bun init.js || true"
+    "postinstall": "bun skills/ralph/scripts/init.js || true"
   },
   "dependencies": {}
 }
