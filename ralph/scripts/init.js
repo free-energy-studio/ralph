@@ -17,7 +17,7 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = process.env.INIT_CWD || process.cwd();
 const RALPH_DIR = join(__dirname, "..", "..");
-const SKILL_SRC = join(RALPH_DIR, "prd");
+const SKILL_SRC = join(RALPH_DIR, "ralph-prd");
 const SKILL_DEST_DIR = join(PROJECT_DIR, ".claude", "skills");
 const SKILL_DEST = join(SKILL_DEST_DIR, "prd");
 const GITIGNORE = join(PROJECT_DIR, ".gitignore");

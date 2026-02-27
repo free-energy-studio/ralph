@@ -4,12 +4,12 @@ A skills repo for AI-powered development workflows. Three skills that work toget
 
 ## Skills
 
-### `/prd` — PRD Generator
+### `/ralph-prd` — PRD Generator
 Generate atomic user stories from Linear tickets or descriptions. Claude Code slash command that creates `.ralph/prd.json`.
 
 ```bash
-/prd DEN-381        # from Linear ticket
-/prd "Add auth"     # from description
+/ralph-prd DEN-381        # from Linear ticket
+/ralph-prd "Add auth"     # from description
 ```
 
 ### `/ralph` — Autonomous Coding Agent
@@ -30,7 +30,7 @@ bun add github:free-energy-studio/ralph
 
 Postinstall automatically:
 - Adds `.ralph/` to `.gitignore`
-- Symlinks the `/prd` skill into `.claude/skills/prd/`
+- Symlinks the `/ralph-prd` skill into `.claude/skills/ralph-prd/`
 
 Manual setup: `bunx ralph-init`
 
@@ -43,11 +43,11 @@ Manual setup: `bunx ralph-init`
 ## Workflow
 
 ```
-Ticket → /prd → bun ralph → Bug Bot fix loop → QA Review → Merge
+Ticket → /ralph-prd → bun ralph → Bug Bot fix loop → QA Review → Merge
 ```
 
 1. **Ticket** — Linear ticket with full context
-2. **PRD** — `/prd TICKET-ID` generates atomic user stories
+2. **PRD** — `/ralph-prd TICKET-ID` generates atomic user stories
 3. **Ralph** — `bun ralph 25` implements and opens PR
 4. **Bug Bot** — Cursor Bug Bot reviews, fix comments with another Ralph loop
 5. **QA** — Move to QA Review, assign reviewer
@@ -56,7 +56,7 @@ Ticket → /prd → bun ralph → Bug Bot fix loop → QA Review → Merge
 ## Repo Structure
 
 ```
-prd/                # PRD generation (Claude Code skill)
+ralph-prd/                # PRD generation (Claude Code skill)
   SKILL.md
   README.md
 ralph/              # Agent loop + setup scripts
