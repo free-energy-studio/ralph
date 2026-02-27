@@ -9,7 +9,7 @@
  * 3. Verifies required tools (gh, claude, bun)
  */
 
-import { existsSync, mkdirSync, symlinkSync, readFileSync, writeFileSync, lstatSync } from "fs";
+import { existsSync, mkdirSync, symlinkSync, readFileSync, writeFileSync, lstatSync, unlinkSync } from "fs";
 import { execSync } from "child_process";
 import { join, relative, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -49,7 +49,8 @@ if (existsSync(GITIGNORE)) {
 }
 
 if (!gitignoreContent.includes(".ralph/")) {
-  gitignoreContent = gitignoreContent.trimEnd() + "\n.ralph/\n";
+  const prefix = gitignoreContent.length > 0 ? gitignoreContent.trimEnd() + "\n" : "";
+  gitignoreContent = prefix + ".ralph/\n";
   writeFileSync(GITIGNORE, gitignoreContent);
   console.log("✅ .gitignore: added .ralph/");
 } else {
@@ -73,7 +74,6 @@ try {
     if (existsSync(SKILL_DEST)) {
       console.log("✅ Skill: /prd already symlinked");
     } else {
-      const { unlinkSync } = await import("fs");
       unlinkSync(SKILL_DEST);
       const relPath = relative(SKILL_DEST_DIR, SKILL_SRC);
       symlinkSync(relPath, SKILL_DEST);
