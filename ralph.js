@@ -52,6 +52,37 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
   const decoder = new TextDecoder();
   let buffer = "";
 
+  const parseLine = (line) => {
+    if (!line.trim()) return;
+    try {
+      const event = JSON.parse(line);
+
+      if (event.type === "assistant" && event.message?.content) {
+        for (const block of event.message.content) {
+          if (block.type === "tool_use") {
+            const input = block.input || {};
+            const detail =
+              input.command?.slice(0, 100) ||
+              input.file_path ||
+              input.pattern ||
+              "";
+            console.log(`  🔧 ${block.name}${detail ? `: ${detail}` : ""}`);
+          }
+          if (block.type === "text" && block.text) {
+            console.log(`  💬 ${block.text.slice(0, 200)}`);
+          }
+        }
+      }
+
+      if (event.type === "result") {
+        resultText = event.result || "";
+        console.log(
+          `\n  ⏱  ${(event.duration_ms / 1000).toFixed(0)}s | $${event.total_cost_usd?.toFixed(3) || "?"}`
+        );
+      }
+    } catch {}
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -59,38 +90,11 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
 
     const lines = buffer.split("\n");
     buffer = lines.pop();
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const event = JSON.parse(line);
-
-        if (event.type === "assistant" && event.message?.content) {
-          for (const block of event.message.content) {
-            if (block.type === "tool_use") {
-              const input = block.input || {};
-              const detail =
-                input.command?.slice(0, 100) ||
-                input.file_path ||
-                input.pattern ||
-                "";
-              console.log(`  🔧 ${block.name}${detail ? `: ${detail}` : ""}`);
-            }
-            if (block.type === "text" && block.text) {
-              console.log(`  💬 ${block.text.slice(0, 200)}`);
-            }
-          }
-        }
-
-        if (event.type === "result") {
-          resultText = event.result || "";
-          console.log(
-            `\n  ⏱  ${(event.duration_ms / 1000).toFixed(0)}s | $${event.total_cost_usd?.toFixed(3) || "?"}`
-          );
-        }
-      } catch {}
-    }
+    for (const line of lines) parseLine(line);
   }
+
+  // Parse any remaining buffered content
+  if (buffer.trim()) parseLine(buffer);
 
   // drain stderr
   try {

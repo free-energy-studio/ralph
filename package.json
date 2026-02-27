@@ -7,7 +7,7 @@
     "ralph-init": "./init.js"
   },
   "scripts": {
-    "postinstall": "node init.js || true"
+    "postinstall": "bun init.js || true"
   },
   "dependencies": {}
 }

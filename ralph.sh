@@ -2,8 +2,6 @@
 set -e
 
 MAX_ITERATIONS=${1:-25}
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROMPT_PATH="$SCRIPT_DIR/prompt.md"
 RALPH_DIR="$(pwd)/.ralph"
 
 echo "🚀 Starting Ralph"
@@ -15,19 +13,18 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "═══ Iteration $i/$MAX_ITERATIONS ═══"
   echo ""
 
-  claude --dangerously-skip-permissions \
-    -p "Read the file $PROMPT_PATH and follow its instructions exactly." \
-    2>&1 || true
+  PROMPT='Read the file .ralph/prd.json and implement the next incomplete story. Follow standard Ralph workflow: checkout branch, implement, typecheck, commit, update prd.json. If all stories pass, push and output <promise>COMPLETE</promise>'
 
+  claude --dangerously-skip-permissions -p "$PROMPT" 2>&1
   CODE=$?
   echo ""
   echo "--- Iteration $i exited with code $CODE ---"
 
   # Check if ralph marked all stories complete
   if [ -f "$RALPH_DIR/prd.json" ]; then
-    REMAINING=$(grep -c '"passes": false' "$RALPH_DIR/prd.json" 2>/dev/null || echo "0")
+    REMAINING=$(grep -c '"passes": false' "$RALPH_DIR/prd.json" || true)
     echo "Stories remaining: $REMAINING"
-    if [ "$REMAINING" = "0" ]; then
+    if [ "$REMAINING" = "0" ] || [ -z "$REMAINING" ]; then
       echo "✅ All stories complete!"
       exit 0
     fi

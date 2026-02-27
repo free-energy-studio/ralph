@@ -10,10 +10,13 @@
  */
 
 import { existsSync, mkdirSync, symlinkSync, readFileSync, writeFileSync, lstatSync } from "fs";
-import { resolve, join, relative } from "path";
+import { execSync } from "child_process";
+import { join, relative, dirname } from "path";
+import { fileURLToPath } from "url";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = process.cwd();
-const RALPH_DIR = import.meta.dir;
+const RALPH_DIR = __dirname;
 const SKILL_SRC = join(RALPH_DIR, "skills", "prd");
 const SKILL_DEST_DIR = join(PROJECT_DIR, ".claude", "skills");
 const SKILL_DEST = join(SKILL_DEST_DIR, "prd");
@@ -26,22 +29,14 @@ const tools = ["gh", "claude", "bun"];
 const missing = [];
 for (const tool of tools) {
   try {
-    Bun.spawnSync(["which", tool], { stdout: "pipe", stderr: "pipe" });
+    execSync(`which ${tool}`, { stdio: "pipe" });
   } catch {
     missing.push(tool);
   }
 }
 
-// which returns 0 even if not found on some systems, check output
-for (const tool of tools) {
-  const result = Bun.spawnSync(["which", tool], { stdout: "pipe", stderr: "pipe" });
-  if (result.exitCode !== 0) {
-    missing.push(tool);
-  }
-}
-
 if (missing.length > 0) {
-  console.log(`⚠️  Missing tools: ${[...new Set(missing)].join(", ")}`);
+  console.log(`⚠️  Missing tools: ${missing.join(", ")}`);
   console.log("   Install them before running Ralph.\n");
 } else {
   console.log("✅ Tools: gh, claude, bun — all found");
@@ -53,16 +48,8 @@ if (existsSync(GITIGNORE)) {
   gitignoreContent = readFileSync(GITIGNORE, "utf-8");
 }
 
-const entries = [".ralph/"];
-let gitignoreUpdated = false;
-for (const entry of entries) {
-  if (!gitignoreContent.includes(entry)) {
-    gitignoreContent = gitignoreContent.trimEnd() + "\n" + entry + "\n";
-    gitignoreUpdated = true;
-  }
-}
-
-if (gitignoreUpdated) {
+if (!gitignoreContent.includes(".ralph/")) {
+  gitignoreContent = gitignoreContent.trimEnd() + "\n.ralph/\n";
   writeFileSync(GITIGNORE, gitignoreContent);
   console.log("✅ .gitignore: added .ralph/");
 } else {
