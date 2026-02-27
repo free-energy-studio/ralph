@@ -56,17 +56,16 @@ Ticket → /prd → bun ralph → Bug Bot fix loop → QA Review → Merge
 ## Repo Structure
 
 ```
-skills/
-  prd/              # PRD generation (Claude Code skill)
-    SKILL.md
-    README.md
-  ralph/            # Agent loop + setup scripts
-    SKILL.md
-    scripts/
-      ralph.js      # The autonomous agent loop
-      init.js       # Project setup (gitignore + symlinks)
-  dev-workflow/     # Orchestration workflow
-    SKILL.md
-    references/
-      prd-format.md
+prd/                # PRD generation (Claude Code skill)
+  SKILL.md
+  README.md
+ralph/              # Agent loop + setup scripts
+  SKILL.md
+  scripts/
+    ralph.js        # The autonomous agent loop
+    init.js         # Project setup (gitignore + symlinks)
+dev-workflow/       # Orchestration workflow
+  SKILL.md
+  references/
+    prd-format.md
 ```
