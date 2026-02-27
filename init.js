@@ -15,7 +15,7 @@ import { join, relative, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_DIR = process.cwd();
+const PROJECT_DIR = process.env.INIT_CWD || process.cwd();
 const RALPH_DIR = __dirname;
 const SKILL_SRC = join(RALPH_DIR, "skills", "prd");
 const SKILL_DEST_DIR = join(PROJECT_DIR, ".claude", "skills");

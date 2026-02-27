@@ -41,7 +41,7 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
     ],
     {
       stdout: "pipe",
-      stderr: "pipe",
+      stderr: "ignore",
       env,
     }
   );
@@ -95,15 +95,6 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
 
   // Parse any remaining buffered content
   if (buffer.trim()) parseLine(buffer);
-
-  // drain stderr
-  try {
-    const stderrReader = proc.stderr.getReader();
-    while (true) {
-      const { done } = await stderrReader.read();
-      if (done) break;
-    }
-  } catch {}
 
   const code = await proc.exited;
   console.log(`  Exit code: ${code}`);
