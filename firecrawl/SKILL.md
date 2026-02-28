@@ -27,7 +27,7 @@ Search the web, scrape pages to markdown, or crawl entire sites using [Firecrawl
 
 ❌ **DON'T use when:**
 
-- You don't have `FIRECRAWL_API_KEY` set
+- `FIRECRAWL_API_KEY` is not configured
 
 ## Requirements
 
