@@ -54,6 +54,7 @@ Ticket → /ralph TICKET-ID → bun ralph → Bug Bot fix loop → QA Review →
 ```
 ralph/              # PRD skill + agent loop
   SKILL.md          # Claude Code skill (PRD generation)
+  package.json      # npm package for `bun ralph` CLI
   scripts/
     ralph.js        # Autonomous agent loop
 dev-workflow/       # Orchestration workflow
