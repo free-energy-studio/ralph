@@ -47,6 +47,7 @@ async function getUnresolvedBugbotComments() {
       pullRequest(number: ${prNumber}) {
         reviewThreads(first: 100) {
           nodes {
+            id
             isResolved
             comments(first: 1) {
               nodes {
@@ -63,7 +64,7 @@ async function getUnresolvedBugbotComments() {
   }`;
 
   const { stdout } = await run(
-    `gh api graphql -f query='${query}' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | select(.comments.nodes[0].author.login == "cursor") | {path: .comments.nodes[0].path, line: .comments.nodes[0].line, body: .comments.nodes[0].body}'`
+    `gh api graphql -f query='${query}' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | select(.comments.nodes[0].author.login == "cursor") | {threadId: .id, path: .comments.nodes[0].path, line: .comments.nodes[0].line, body: .comments.nodes[0].body}'`
   );
 
   if (!stdout) return [];
@@ -188,25 +189,28 @@ for (let i = 1; i <= MAX_ITERATIONS; i++) {
   const commentDetails = comments
     .map(
       (c) =>
-        `File: ${c.path}${c.line ? ` (line ${c.line})` : ""}\nIssue: ${extractBugDescription(c.body)}`
+        `Thread ID: ${c.threadId}\nFile: ${c.path}${c.line ? ` (line ${c.line})` : ""}\nIssue: ${extractBugDescription(c.body)}`
     )
     .join("\n\n");
 
-  const prompt = `You are fixing Cursor Bug Bot review comments on a PR.
+  const prompt = `You are reviewing Cursor Bug Bot comments on a PR. Evaluate each comment and decide whether to FIX or DISMISS it.
 
-Here are the unresolved comments to fix:
+Here are the unresolved comments:
 
 ${commentDetails}
 
 For each comment:
-1. Read the file referenced
-2. Understand the issue described
-3. Implement the fix
-4. Run typecheck to verify
+1. Read the file referenced and surrounding context
+2. Evaluate the issue — is it a real bug, or a false positive?
+3. If VALID: implement the fix
+4. If INVALID (false positive, already handled, not applicable): reply to the thread explaining why, then resolve it:
+   gh api graphql -f query='mutation { addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: "THREAD_ID", body: "Dismissed: [brief reason]"}) { comment { id } } }'
+   gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "THREAD_ID"}) { thread { isResolved } } }'
 
-After fixing all comments:
-1. git add -A && git commit -m "fix: address Bug Bot review comments"
-2. git push`;
+After processing all comments:
+1. Run typecheck to verify (if any fixes were made)
+2. git add -A && git commit -m "fix: address Bug Bot review comments" (if any fixes were made)
+3. git push (if any fixes were made)`;
 
   // 4. Run Claude to fix
   await runClaude(prompt);
