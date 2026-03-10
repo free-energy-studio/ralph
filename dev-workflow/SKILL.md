@@ -9,15 +9,24 @@ Deterministic development flow: Ticket → PRD → Ralph → Bugwatch → QA han
 
 ## Prerequisites
 
-1. **Ralph & Bugwatch installed globally** — Install via the skills repo:
+1. **`ralph` system user** — A dedicated non-root user named `ralph` must exist. Claude Code refuses `--dangerously-skip-permissions` as root, so the scripts auto-re-exec as this user. Setup:
+   ```bash
+   sudo useradd -m -s /bin/bash ralph
+   ```
+   The `ralph` user needs:
+   - Claude Code installed and authenticated (`claude auth login`)
+   - GitHub CLI authenticated (`gh auth login`)
+   - Write access to project directories
+
+2. **Ralph & Bugwatch installed globally** — Install via the skills repo:
    ```bash
    curl -fsSL https://raw.githubusercontent.com/free-energy-studio/skills/main/install.sh | bash -s ralph
    ```
    Verify: `which ralph && which bugwatch`
 
-2. **Claude Code CLI** — Installed and authenticated (`claude` in PATH)
+3. **Claude Code CLI** — Installed and authenticated on the `ralph` user
 
-3. **GitHub CLI** — Authenticated (`gh auth status`)
+4. **GitHub CLI** — Authenticated on the `ralph` user (`gh auth status`)
 
 ## Flow
 

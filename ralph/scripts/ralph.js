@@ -3,7 +3,7 @@
 // Re-exec as non-root user if running as root
 import { userInfo } from "os";
 if (userInfo().uid === 0) {
-  const proc = Bun.spawn(["sudo", "-u", "dev", "-E", "bun", ...process.argv.slice(1)], {
+  const proc = Bun.spawn(["sudo", "-u", "ralph", "-E", "bun", ...process.argv.slice(1)], {
     stdout: "inherit",
     stderr: "inherit",
     cwd: process.cwd(),
