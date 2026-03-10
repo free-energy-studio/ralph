@@ -178,8 +178,10 @@ if (!prNumber) {
 console.log(`   PR #${prNumber}\n`);
 
 // Wait for Bug Bot check to appear before entering the fix loop
-const MAX_STARTUP_POLLS = 10;
-console.log("  ⏳ Waiting for Bug Bot check to appear...");
+const STARTUP_POLL_INTERVAL = 30_000; // 30s between startup polls
+const STARTUP_TIMEOUT = 5 * 60_000;   // 5 min max wait
+const MAX_STARTUP_POLLS = Math.ceil(STARTUP_TIMEOUT / STARTUP_POLL_INTERVAL);
+console.log("  ⏳ Waiting for Bug Bot check to appear (up to 5m)...");
 let checkFound = false;
 for (let s = 1; s <= MAX_STARTUP_POLLS; s++) {
   const status = await getBugbotCheckStatus();
@@ -189,7 +191,7 @@ for (let s = 1; s <= MAX_STARTUP_POLLS; s++) {
     break;
   }
   console.log(`  … not found yet (${s}/${MAX_STARTUP_POLLS})`);
-  await Bun.sleep(POLL_INTERVAL);
+  await Bun.sleep(STARTUP_POLL_INTERVAL);
 }
 if (!checkFound) {
   console.error("❌ Bug Bot check never appeared — is it configured for this repo?");
