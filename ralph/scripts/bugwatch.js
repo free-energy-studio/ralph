@@ -177,38 +177,35 @@ if (!prNumber) {
 }
 console.log(`   PR #${prNumber}\n`);
 
-// Wait for Bug Bot check to appear before entering the fix loop
-const STARTUP_POLL_INTERVAL = 30_000; // 30s between startup polls
-const STARTUP_TIMEOUT = 5 * 60_000;   // 5 min max wait
-const MAX_STARTUP_POLLS = Math.ceil(STARTUP_TIMEOUT / STARTUP_POLL_INTERVAL);
-console.log("  ⏳ Waiting for Bug Bot check to appear (up to 5m)...");
-let checkFound = false;
-for (let s = 1; s <= MAX_STARTUP_POLLS; s++) {
-  const status = await getBugbotCheckStatus();
-  if (!status.notFound) {
-    checkFound = true;
-    console.log("  ✓ Bug Bot check detected\n");
-    break;
+async function waitForCheck() {
+  const maxWait = 5 * 60_000; // 5 min
+  const interval = 30_000;    // 30s
+  const maxPolls = Math.ceil(maxWait / interval);
+
+  for (let s = 1; s <= maxPolls; s++) {
+    const status = await getBugbotCheckStatus();
+    if (status.notFound) {
+      console.log(`  ⏳ Bug Bot check not found yet (${s}/${maxPolls})…`);
+    } else if (status.running) {
+      console.log(`  ⏳ Bug Bot is running (${s}/${maxPolls})…`);
+    } else {
+      console.log("  ✓ Bug Bot has finished");
+      return status;
+    }
+    await Bun.sleep(interval);
   }
-  console.log(`  … not found yet (${s}/${MAX_STARTUP_POLLS})`);
-  await Bun.sleep(STARTUP_POLL_INTERVAL);
-}
-if (!checkFound) {
-  console.error("❌ Bug Bot check never appeared — is it configured for this repo?");
-  process.exit(1);
+  return null; // timed out
 }
 
 for (let i = 1; i <= MAX_ITERATIONS; i++) {
-  console.log(`\n═══ Check ${i}/${MAX_ITERATIONS} ═══\n`);
+  console.log(`\n═══ Iteration ${i}/${MAX_ITERATIONS} ═══\n`);
 
-  // 1. Check if Bug Bot is still running
-  const check = await getBugbotCheckStatus();
-  if (check.running) {
-    console.log("  ⏳ Bug Bot is still running — waiting...");
-    await Bun.sleep(POLL_INTERVAL);
-    continue;
+  // 1. Wait for Bug Bot to appear and finish
+  const check = await waitForCheck();
+  if (!check) {
+    console.error("❌ Timed out waiting for Bug Bot — is it configured for this repo?");
+    process.exit(1);
   }
-  console.log("  ✓ Bug Bot has finished");
 
   // 2. Get unresolved comments
   const comments = await getUnresolvedBugbotComments();
@@ -250,12 +247,12 @@ After processing all comments:
 2. git add -A && git commit -m "fix: address Bug Bot review comments" (if any fixes were made)
 3. git push (if any fixes were made)`;
 
-  // 4. Run Claude to fix
+  // 4. Run Claude to fix (pushes if changes made)
   await runClaude(prompt);
 
-  // 5. Wait for Bug Bot to re-run after push
-  console.log("\n  ⏳ Waiting for Bug Bot to re-run after push...");
-  await Bun.sleep(POLL_INTERVAL);
+  // 5. Brief pause before next iteration to let new check register
+  console.log("\n  ⏳ Waiting for new Bug Bot run…");
+  await Bun.sleep(30_000);
 }
 
 console.log("\n⚠️ Max iterations reached — some comments may remain unresolved");
