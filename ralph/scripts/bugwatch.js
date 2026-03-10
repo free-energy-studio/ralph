@@ -1,5 +1,16 @@
 #!/usr/bin/env bun
 
+// Re-exec as non-root user if running as root
+import { userInfo } from "os";
+if (userInfo().uid === 0) {
+  const proc = Bun.spawn(["sudo", "-u", "dev", "-E", "bun", ...process.argv.slice(1)], {
+    stdout: "inherit",
+    stderr: "inherit",
+    cwd: process.cwd(),
+  });
+  process.exit(await proc.exited);
+}
+
 const MAX_ITERATIONS = parseInt(process.argv[2] || "20", 10);
 const POLL_INTERVAL = 60_000; // 1 minute between polls
 const BUGBOT_CHECK_NAME = "Cursor Bugbot";
@@ -24,13 +35,13 @@ async function getPrNumber() {
 
 async function getBugbotCheckStatus() {
   const { stdout } = await run(
-    `gh pr checks --json name,status,conclusion --jq '.[] | select(.name == "${BUGBOT_CHECK_NAME}") | .status + ":" + .conclusion'`
+    `gh pr checks --json name,state --jq '.[] | select(.name == "${BUGBOT_CHECK_NAME}") | .state'`
   );
   if (!stdout) return { running: false, passed: true }; // no check = nothing to do
-  const [status, conclusion] = stdout.split(":");
+  // state values: PENDING, SUCCESS, FAILURE, NEUTRAL, SKIPPED, etc.
   return {
-    running: status !== "completed",
-    passed: conclusion === "success",
+    running: stdout === "PENDING",
+    passed: stdout === "SUCCESS" || stdout === "NEUTRAL",
   };
 }
 
@@ -96,7 +107,7 @@ async function runClaude(prompt) {
       "stream-json",
       "--verbose",
     ],
-    { stdout: "pipe", stderr: "ignore", env }
+    { stdout: "pipe", stderr: "pipe", env }
   );
 
   let resultText = "";
@@ -143,7 +154,12 @@ async function runClaude(prompt) {
   }
   if (buffer.trim()) parseLine(buffer);
 
-  await proc.exited;
+  const stderr = await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    console.error(`  ❌ Claude exited with code ${exitCode}`);
+    if (stderr.trim()) console.error(`  ${stderr.trim().slice(0, 300)}`);
+  }
   return resultText;
 }
 

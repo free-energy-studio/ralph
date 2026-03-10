@@ -1,5 +1,16 @@
 #!/usr/bin/env bun
 
+// Re-exec as non-root user if running as root
+import { userInfo } from "os";
+if (userInfo().uid === 0) {
+  const proc = Bun.spawn(["sudo", "-u", "dev", "-E", "bun", ...process.argv.slice(1)], {
+    stdout: "inherit",
+    stderr: "inherit",
+    cwd: process.cwd(),
+  });
+  process.exit(await proc.exited);
+}
+
 const MAX_ITERATIONS = parseInt(process.argv[2] || "25", 10);
 const RALPH_DIR = `${process.cwd()}/.ralph`;
 
